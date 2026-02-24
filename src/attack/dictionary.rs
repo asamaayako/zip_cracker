@@ -34,6 +34,7 @@ pub fn ensure_dictionary_exists(path: &PathBuf) -> std::io::Result<()> {
         writeln!(file, "# Archive Cracker 密码字典")?;
         writeln!(file, "# 每行一个密码，# 开头为注释")?;
         writeln!(file, "# 破解成功的密码会自动追加到此文件")?;
+        writeln!(file, "# 你也可以主动记录密码到这个文件中以加速破解")?;
         writeln!(file)?;
         writeln!(file, "# === 内置 Top 1000 常用密码 ===")?;
         for password in TOP_1000_PASSWORDS {
