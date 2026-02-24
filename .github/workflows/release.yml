@@ -42,16 +42,24 @@ jobs:
       - name: Package (Unix)
         if: matrix.os != 'windows-latest'
         run: |
-          cd target/${{ matrix.target }}/release
-          tar czvf ../../../zip_cracker-${{ matrix.name }}.tar.gz zip_cracker
-          cd ../../..
+          mkdir -p package
+          cp target/${{ matrix.target }}/release/zip_cracker package/
+          cp dictionary.txt package/
+          cp README.md package/
+          cd package
+          tar czvf ../zip_cracker-${{ matrix.name }}.tar.gz *
+          cd ..
 
       - name: Package (Windows)
         if: matrix.os == 'windows-latest'
         run: |
-          cd target/${{ matrix.target }}/release
-          7z a ../../../zip_cracker-${{ matrix.name }}.zip zip_cracker.exe
-          cd ../../..
+          mkdir package
+          copy target\${{ matrix.target }}\release\zip_cracker.exe package\
+          copy dictionary.txt package\
+          copy README.md package\
+          cd package
+          7z a ..\zip_cracker-${{ matrix.name }}.zip *
+          cd ..
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

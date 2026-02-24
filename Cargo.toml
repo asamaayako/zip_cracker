@@ -1,6 +1,6 @@
 [package]
 name = "zip_cracker"
-version = "0.1.0"
+version = "0.1.2"
 edition = "2021"
 
 [dependencies]
@@ -9,6 +9,7 @@ rayon = "1.10"
 num_cpus = "1.16"
 infer = "0.16"       # 文件类型检测库
 clap = { version = "4.5", features = ["derive"] }  # 命令行参数解析
+dirs = "5.0"         # 获取用户目录
 
 [profile.release]
 opt-level = 3
