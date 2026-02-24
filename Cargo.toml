@@ -1,15 +1,18 @@
 [package]
 name = "zip_cracker"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 
 [dependencies]
 zip = "2.2"
 rayon = "1.10"
 num_cpus = "1.16"
-infer = "0.16"       # 文件类型检测库
+infer = "0.16"                # 文件类型检测库
 clap = { version = "4.5", features = ["derive"] }  # 命令行参数解析
-dirs = "5.0"         # 获取用户目录
+dirs = "5.0"                  # 获取用户目录
+sevenz-rust = { version = "0.6", features = ["aes256"] }  # 7z 支持
+unrar = "0.5"                 # RAR 支持
+tempfile = "3.10"             # 临时文件
 
 [profile.release]
 opt-level = 3

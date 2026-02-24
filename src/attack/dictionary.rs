@@ -7,8 +7,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
 
+use crate::archive::{ArchiveHandler, TargetFile};
 use crate::passwords::TOP_1000_PASSWORDS;
-use crate::zip_utils::try_password;
 
 /// 字典攻击结果
 pub struct DictionaryResult {
@@ -31,7 +31,7 @@ pub fn ensure_dictionary_exists(path: &PathBuf) -> std::io::Result<()> {
     if !path.exists() {
         // 创建字典文件，带注释头和内置密码
         let mut file = File::create(path)?;
-        writeln!(file, "# ZIP Cracker 密码字典")?;
+        writeln!(file, "# Archive Cracker 密码字典")?;
         writeln!(file, "# 每行一个密码，# 开头为注释")?;
         writeln!(file, "# 破解成功的密码会自动追加到此文件")?;
         writeln!(file)?;
@@ -96,29 +96,31 @@ pub fn load_dictionary_unique(path: &str) -> Result<Vec<String>, std::io::Error>
 
 /// 执行字典攻击
 pub fn dictionary_attack(
-    zip_path: &str,
+    archive_path: &str,
     dict_path: &str,
-    target_index: usize,
-    target_ext: &str,
-    target_name: &str,
+    target: &TargetFile,
     file_count: usize,
+    handler: &dyn ArchiveHandler,
 ) -> DictionaryResult {
     let num_cpus = num_cpus::get();
 
     // 加载字典（去重）
     let passwords = load_dictionary_unique(dict_path).expect("无法加载字典文件");
 
-    println!("=== ZIP 密码字典攻击器 (Rust 多线程版) ===");
-    println!("目标文件: {}", zip_path);
+    println!(
+        "=== {} 密码字典攻击器 (Rust 多线程版) ===",
+        handler.format_name()
+    );
+    println!("目标文件: {}", archive_path);
     println!("CPU 核心数: {}", num_cpus);
     println!("字典文件: {}", dict_path);
     println!("字典条目: {} 个密码", passwords.len());
     println!();
-    println!("检测到目标文件: {} (索引 {})", target_name, target_index);
-    println!("文件扩展名: .{}", target_ext);
+    println!("检测到目标文件: {} (索引 {})", target.name, target.index);
+    println!("文件扩展名: .{}", target.extension);
     println!("验证方式: 使用 infer 库检测解密后内容是否匹配扩展名");
     println!();
-    println!("ZIP 文件包含 {} 个文件", file_count);
+    println!("压缩包包含 {} 个文件", file_count);
     println!();
     println!("开始破解...");
 
@@ -132,7 +134,7 @@ pub fn dictionary_attack(
             if found.load(Ordering::Relaxed) {
                 return false;
             }
-            if try_password(zip_path, password, target_index, target_ext) {
+            if handler.try_password(archive_path, password, target) {
                 found.store(true, Ordering::Relaxed);
                 return true;
             }

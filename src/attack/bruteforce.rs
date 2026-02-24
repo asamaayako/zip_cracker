@@ -3,9 +3,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
 
+use crate::archive::{ArchiveHandler, TargetFile};
 use crate::charset::{get_combined_charset, index_to_password};
 use crate::cli::Charset;
-use crate::zip_utils::try_password;
 
 /// 暴力破解结果
 pub struct BruteforceResult {
@@ -16,14 +16,13 @@ pub struct BruteforceResult {
 
 /// 暴力破解参数
 pub struct BruteforceParams<'a> {
-    pub zip_path: &'a str,
+    pub archive_path: &'a str,
     pub charsets: &'a [Charset],
     pub min_len: usize,
     pub max_len: usize,
-    pub target_index: usize,
-    pub target_ext: &'a str,
-    pub target_name: &'a str,
+    pub target: &'a TargetFile,
     pub file_count: usize,
+    pub handler: &'a dyn ArchiveHandler,
 }
 
 /// 执行暴力破解攻击
@@ -31,8 +30,11 @@ pub fn bruteforce_attack(params: BruteforceParams) -> BruteforceResult {
     let num_cpus = num_cpus::get();
     let (charset_name, chars) = get_combined_charset(params.charsets);
 
-    println!("=== ZIP 密码暴力破解器 (Rust 多线程版) ===");
-    println!("目标文件: {}", params.zip_path);
+    println!(
+        "=== {} 密码暴力破解器 (Rust 多线程版) ===",
+        params.handler.format_name()
+    );
+    println!("目标文件: {}", params.archive_path);
     println!("CPU 核心数: {}", num_cpus);
     println!("字符集: {} ({}字符)", charset_name, chars.len());
 
@@ -62,13 +64,13 @@ pub fn bruteforce_attack(params: BruteforceParams) -> BruteforceResult {
 
     println!(
         "检测到目标文件: {} (索引 {})",
-        params.target_name, params.target_index
+        params.target.name, params.target.index
     );
-    println!("文件扩展名: .{}", params.target_ext);
+    println!("文件扩展名: .{}", params.target.extension);
     println!("验证方式: 使用 infer 库检测解密后内容是否匹配扩展名");
     println!();
 
-    println!("ZIP 文件包含 {} 个文件", params.file_count);
+    println!("压缩包包含 {} 个文件", params.file_count);
     println!();
     println!("开始破解...");
 
@@ -97,7 +99,10 @@ pub fn bruteforce_attack(params: BruteforceParams) -> BruteforceResult {
             }
 
             let pwd = index_to_password(index, &chars, current_len);
-            if try_password(params.zip_path, &pwd, params.target_index, params.target_ext) {
+            if params
+                .handler
+                .try_password(params.archive_path, &pwd, params.target)
+            {
                 found.store(true, Ordering::Relaxed);
                 return true;
             }

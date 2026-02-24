@@ -1,24 +1,24 @@
-# ZIP Cracker
+# Archive Cracker
 
-多线程 ZIP 密码破解工具，使用 Rust 编写。
+多线程压缩包密码破解工具，使用 Rust 编写。支持 ZIP、7z、RAR 格式。
 
 ## 特性
 
+- **多格式支持**：支持 ZIP、7z、RAR 加密压缩包
 - **多线程并行**：使用 rayon 库充分利用多核 CPU
-- **双攻击模式**：支持暴力破解和字典攻击
+- **智能攻击策略**：先尝试字典攻击，失败后自动进行暴力破解
 - **密码记忆**：破解成功的密码自动保存到字典，下次优先尝试
-- **零内存预分配**：按需生成密码，内存占用仅 ~3MB（支持超大字符集和密码空间）
-- **自动检测**：自动识别 ZIP 内可验证的加密文件
+- **内置字典**：首次运行自动创建包含 Top 1000 常用密码的字典
+- **零内存预分配**：按需生成密码，内存占用仅 ~3MB
 - **智能验证**：使用 infer 库通过文件魔数验证密码正确性
-- **灵活字符集**：支持拼音声母、字母、数字、汉字等基础字符集，可自由组合
-- **可配置长度**：支持固定长度或递增模式（未知密码位数时自动尝试）
+- **灵活字符集**：支持拼音声母、字母、数字、汉字等基础字符集
 
 ## 安装
 
 ### 下载预编译版本
 
 从 [Releases](https://github.com/asamaayako/zip_cracker/releases) 下载对应平台的压缩包，包含：
-- `zip_cracker` - 可执行文件
+- `archive_cracker` - 可执行文件
 - `dictionary.txt` - 内置 Top 1000 常用密码字典
 - `README.md` - 使用说明
 
@@ -32,62 +32,53 @@ cargo build --release
 
 ## 使用
 
-### 字典攻击（推荐优先使用）
+### 基本用法（推荐）
 
-使用已有密码字典快速尝试，适合破解常见密码：
-
-```bash
-# 使用默认字典 (~/.zip_cracker/dictionary.txt)
-./target/release/zip_cracker -M dictionary 文件.zip
-
-# 使用自定义字典
-./target/release/zip_cracker -M dictionary -D rockyou.txt 文件.zip
-```
-
-**密码自动记忆**：每次破解成功后，密码会自动保存到默认字典 `~/.zip_cracker/dictionary.txt`，下次破解时优先尝试历史密码。
-
-### 暴力破解
-
-#### 固定长度模式
-
-当已知密码长度时使用 `-l` 参数：
+只需指定压缩包路径，程序会自动使用内置字典尝试破解：
 
 ```bash
-# 指定4位密码
-./target/release/zip_cracker -l 4 文件.zip
-
-# 指定字符集 + 密码长度
-./target/release/zip_cracker -c lower,digit -l 5 文件.zip
+./archive_cracker 文件.zip
+./archive_cracker 文件.7z
+./archive_cracker 文件.rar
 ```
 
-#### 递增模式（未知密码位数）
+### 字典 + 暴力破解组合
 
-当不确定密码长度时，使用 `-m` 指定最大长度，程序会从最小长度开始逐一尝试：
+如果字典攻击失败，可以指定长度参数进行暴力破解：
 
 ```bash
-# 从1位尝试到6位
-./target/release/zip_cracker -m 6 文件.zip
+# 先尝试字典，失败后暴力破解 4 位密码
+./archive_cracker -l 4 文件.zip
 
-# 从3位尝试到8位
-./target/release/zip_cracker --min-length 3 -m 8 文件.zip
+# 先尝试字典，失败后尝试 1-6 位密码
+./archive_cracker -m 6 文件.zip
 
-# 配合字符集使用（仅数字）
-./target/release/zip_cracker -c digit -m 6 文件.zip
-
-# 组合多个字符集（大小写字母+数字）
-./target/release/zip_cracker -c lower,upper,digit -m 6 文件.zip
+# 先尝试字典，失败后尝试 3-8 位纯数字密码
+./archive_cracker -c digit --min-length 3 -m 8 文件.zip
 ```
 
-### 参数说明
+### 使用自定义字典
+
+```bash
+./archive_cracker -D rockyou.txt 文件.zip
+```
+
+### 跳过字典攻击
+
+```bash
+./archive_cracker --skip-dictionary -l 4 文件.zip
+```
+
+## 参数说明
 
 | 参数 | 说明 |
 |------|------|
-| `-M, --mode <MODE>` | 攻击模式：`bruteforce`（默认）或 `dictionary` |
 | `-D, --dictionary <PATH>` | 字典文件路径（默认 `~/.zip_cracker/dictionary.txt`） |
-| `-l, --length <N>` | 固定密码长度 |
+| `-l, --length <N>` | 固定密码长度（暴力破解） |
 | `-m, --max-length <N>` | 最大密码长度（递增模式） |
 | `--min-length <N>` | 最小密码长度，默认为 1 |
 | `-c, --charset <NAME>` | 字符集选择（可多选，用逗号分隔） |
+| `--skip-dictionary` | 跳过字典攻击，直接暴力破解 |
 
 ## 字典文件格式
 
@@ -109,8 +100,6 @@ abc123
 
 ## 字符集选项
 
-### 基础字符集
-
 | 参数 | 名称 | 字符数 | 字符范围 |
 |------|------|--------|----------|
 | `pinyin` | 拼音声母 | 20 | bpmfdtnlgkhjqxzcsryw |
@@ -124,50 +113,32 @@ abc123
 
 默认字符集：`lower,upper,digit`（大小写字母+数字，62字符）
 
-### 组合示例
+## 支持的格式
 
-```bash
-# 仅小写字母
-./target/release/zip_cracker -c lower -l 4 文件.zip
-
-# 小写+数字
-./target/release/zip_cracker -c lower,digit -l 4 文件.zip
-
-# 大小写字母+数字（默认）
-./target/release/zip_cracker -c lower,upper,digit -l 4 文件.zip
-
-# 仅数字+符号（如：123!）
-./target/release/zip_cracker -c digit,symbol -l 4 文件.zip
-
-# 拼音声母+数字
-./target/release/zip_cracker -c pinyin,digit -l 4 文件.zip
-
-# 数字+全角符号
-./target/release/zip_cracker -c digit,fullwidth -l 4 文件.zip
-
-# 字母+数字+ASCII符号（全部ASCII）
-./target/release/zip_cracker -c ascii -l 4 文件.zip
-```
+| 格式 | 扩展名 | 加密支持 |
+|------|--------|----------|
+| ZIP | .zip | ✅ ZipCrypto, AES |
+| 7z | .7z | ✅ AES-256 |
+| RAR | .rar | ✅ RAR3, RAR5 |
 
 ## 性能参考
 
 测试环境：8核 CPU，Apple M 系列
 
-### 速度基准
-
-| 字符集组合 | 字符数 | 4位密码组合数 | 预计时间 | 平均速度 |
-|-----------|--------|--------------|---------|----------|
-| digit | 10 | 10,000 | <1秒 | ~30,000/秒 |
-| pinyin | 20 | 160,000 | ~2秒 | ~60,000/秒 |
-| lower | 26 | 456,976 | ~5秒 | ~70,000/秒 |
-| lower,digit | 36 | 1,679,616 | ~17秒 | ~70,000/秒 |
-| lower,upper,digit | 62 | 14,776,336 | ~4分钟 | ~64,000/秒 |
-| ascii | 95 | 81,450,625 | ~14分钟 | ~90,000/秒 |
+| 字符集组合 | 字符数 | 4位密码组合数 | 预计时间 |
+|-----------|--------|--------------|---------|
+| digit | 10 | 10,000 | <1秒 |
+| pinyin | 20 | 160,000 | ~2秒 |
+| lower | 26 | 456,976 | ~5秒 |
+| lower,digit | 36 | 1,679,616 | ~17秒 |
+| lower,upper,digit | 62 | 14,776,336 | ~4分钟 |
 
 ## 依赖
 
 - [rayon](https://crates.io/crates/rayon) - 并行计算
 - [zip](https://crates.io/crates/zip) - ZIP 文件处理
+- [sevenz-rust](https://crates.io/crates/sevenz-rust) - 7z 文件处理
+- [unrar](https://crates.io/crates/unrar) - RAR 文件处理
 - [infer](https://crates.io/crates/infer) - 文件类型检测
 - [clap](https://crates.io/crates/clap) - 命令行参数解析
 

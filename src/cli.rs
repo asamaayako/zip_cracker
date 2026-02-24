@@ -1,16 +1,11 @@
 use clap::{Parser, ValueEnum};
 
 #[derive(Parser)]
-#[command(name = "zip_cracker")]
-#[command(about = "ZIP 密码破解器 (多线程)", long_about = None)]
+#[command(name = "archive_cracker")]
+#[command(about = "压缩包密码破解器 - 支持 ZIP/7z/RAR (多线程)", long_about = None)]
 pub struct Args {
-    /// ZIP 文件路径
-    #[arg(default_value = "../default.zip")]
-    pub zip_path: String,
-
-    /// 攻击模式
-    #[arg(short = 'M', long, value_enum, default_value = "bruteforce")]
-    pub mode: AttackMode,
+    /// 压缩包文件路径 (支持 .zip, .7z, .rar)
+    pub archive_path: String,
 
     /// 字典文件路径 (默认: ~/.zip_cracker/dictionary.txt)
     #[arg(short = 'D', long)]
@@ -20,25 +15,21 @@ pub struct Args {
     #[arg(short, long, value_delimiter = ',', default_value = "lower,upper,digit")]
     pub charset: Vec<Charset>,
 
-    /// 密码长度 (固定长度模式)
+    /// 密码长度 (固定长度模式，暴力破解时必需)
     #[arg(short, long)]
     pub length: Option<usize>,
 
-    /// 最大密码长度 (递增模式: 从1开始逐一尝试到此长度)
+    /// 最大密码长度 (递增模式: 从 min-length 开始逐一尝试到此长度)
     #[arg(short, long)]
     pub max_length: Option<usize>,
 
     /// 最小密码长度 (递增模式下的起始长度, 默认为1)
     #[arg(long, default_value = "1")]
     pub min_length: usize,
-}
 
-#[derive(Clone, ValueEnum)]
-pub enum AttackMode {
-    /// 暴力破解
-    Bruteforce,
-    /// 字典攻击
-    Dictionary,
+    /// 跳过字典攻击，直接暴力破解
+    #[arg(long)]
+    pub skip_dictionary: bool,
 }
 
 #[derive(Clone, ValueEnum, PartialEq, Eq, Hash)]
