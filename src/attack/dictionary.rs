@@ -17,10 +17,10 @@ pub struct DictionaryResult {
     pub elapsed_secs: f64,
 }
 
-/// 获取默认字典路径 (~/.zip_cracker/dictionary.txt)
+/// 获取默认字典路径 (~/.archive_cracker/dictionary.txt)
 pub fn get_default_dictionary_path() -> PathBuf {
     let home = dirs::home_dir().expect("无法获取用户主目录");
-    home.join(".zip_cracker").join("dictionary.txt")
+    home.join(".archive_cracker").join("dictionary.txt")
 }
 
 /// 确保字典目录和文件存在，首次创建时写入内置 Top1000 密码

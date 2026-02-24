@@ -7,7 +7,7 @@ pub struct Args {
     /// 压缩包文件路径 (支持 .zip, .7z, .rar)
     pub archive_path: String,
 
-    /// 字典文件路径 (默认: ~/.zip_cracker/dictionary.txt)
+    /// 字典文件路径 (默认: ~/.archive_cracker/dictionary.txt)
     #[arg(short = 'D', long)]
     pub dictionary: Option<String>,
 

@@ -88,6 +88,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "archive_cracker"
+version = "0.1.3"
+dependencies = [
+ "clap",
+ "dirs",
+ "infer",
+ "num_cpus",
+ "rayon",
+ "sevenz-rust",
+ "tempfile",
+ "unrar",
+ "zip",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1461,21 +1476,6 @@ dependencies = [
  "zeroize",
  "zopfli",
  "zstd",
-]
-
-[[package]]
-name = "zip_cracker"
-version = "0.1.3"
-dependencies = [
- "clap",
- "dirs",
- "infer",
- "num_cpus",
- "rayon",
- "sevenz-rust",
- "tempfile",
- "unrar",
- "zip",
 ]
 
 [[package]]

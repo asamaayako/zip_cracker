@@ -43,29 +43,29 @@ jobs:
         if: matrix.os != 'windows-latest'
         run: |
           mkdir -p package
-          cp target/${{ matrix.target }}/release/zip_cracker package/
+          cp target/${{ matrix.target }}/release/archive_cracker package/
           cp dictionary.txt package/
           cp README.md package/
           cd package
-          tar czvf ../zip_cracker-${{ matrix.name }}.tar.gz *
+          tar czvf ../archive_cracker-${{ matrix.name }}.tar.gz *
           cd ..
 
       - name: Package (Windows)
         if: matrix.os == 'windows-latest'
         run: |
           mkdir package
-          copy target\${{ matrix.target }}\release\zip_cracker.exe package\
+          copy target\${{ matrix.target }}\release\archive_cracker.exe package\
           copy dictionary.txt package\
           copy README.md package\
           cd package
-          7z a ..\zip_cracker-${{ matrix.name }}.zip *
+          7z a ..\archive_cracker-${{ matrix.name }}.zip *
           cd ..
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: zip_cracker-${{ matrix.name }}
-          path: zip_cracker-${{ matrix.name }}.*
+          name: archive_cracker-${{ matrix.name }}
+          path: archive_cracker-${{ matrix.name }}.*
 
   release:
     name: Create Release

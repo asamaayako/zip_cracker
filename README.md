@@ -73,7 +73,7 @@ cargo build --release
 
 | 参数 | 说明 |
 |------|------|
-| `-D, --dictionary <PATH>` | 字典文件路径（默认 `~/.zip_cracker/dictionary.txt`） |
+| `-D, --dictionary <PATH>` | 字典文件路径（默认 `~/.archive_cracker/dictionary.txt`） |
 | `-l, --length <N>` | 固定密码长度（暴力破解） |
 | `-m, --max-length <N>` | 最大密码长度（递增模式） |
 | `--min-length <N>` | 最小密码长度，默认为 1 |
@@ -96,7 +96,7 @@ abc123
 - `#` 开头的行作为注释
 - 自动去重，相同密码只尝试一次
 
-默认字典位置：`~/.zip_cracker/dictionary.txt`
+默认字典位置：`~/.archive_cracker/dictionary.txt`
 
 ## 字符集选项
 
