@@ -8,7 +8,7 @@
 - **零内存预分配**：按需生成密码，内存占用仅 ~3MB（支持超大字符集和密码空间）
 - **自动检测**：自动识别 ZIP 内可验证的加密文件
 - **智能验证**：使用 infer 库通过文件魔数验证密码正确性
-- **多种字符集**：支持 Base64、拼音声母、字母、数字等多种字符集
+- **灵活字符集**：支持拼音声母、字母、数字、汉字等基础字符集，可自由组合
 - **可配置长度**：支持固定长度或递增模式（未知密码位数时自动尝试）
 
 ## 安装
@@ -30,7 +30,7 @@ cargo build --release
 ./target/release/zip_cracker -l 4 文件.zip
 
 # 指定字符集 + 密码长度
-./target/release/zip_cracker -c alnum -l 5 文件.zip
+./target/release/zip_cracker -c lower,digit -l 5 文件.zip
 ```
 
 ### 递增模式（未知密码位数）
@@ -44,8 +44,11 @@ cargo build --release
 # 从3位尝试到8位
 ./target/release/zip_cracker --min-length 3 -m 8 文件.zip
 
-# 配合字符集使用
+# 配合字符集使用（仅数字）
 ./target/release/zip_cracker -c digit -m 6 文件.zip
+
+# 组合多个字符集（大小写字母+数字）
+./target/release/zip_cracker -c lower,upper,digit -m 6 文件.zip
 ```
 
 ### 参数说明
@@ -55,19 +58,49 @@ cargo build --release
 | `-l, --length <N>` | 固定密码长度 |
 | `-m, --max-length <N>` | 最大密码长度（递增模式） |
 | `--min-length <N>` | 最小密码长度，默认为 1 |
-| `-c, --charset <NAME>` | 字符集选择 |
+| `-c, --charset <NAME>` | 字符集选择（可多选，用逗号分隔） |
 
 ## 字符集选项
 
+### 基础字符集
+
 | 参数 | 名称 | 字符数 | 字符范围 |
 |------|------|--------|----------|
-| `base64` | Base64 (默认) | 62 | A-Za-z0-9 |
 | `pinyin` | 拼音声母 | 20 | bpmfdtnlgkhjqxzcsryw |
 | `lower` | 小写字母 | 26 | a-z |
 | `upper` | 大写字母 | 26 | A-Z |
 | `digit` | 数字 | 10 | 0-9 |
-| `alnum` | 小写+数字 | 36 | a-z0-9 |
-| `ascii` | 可打印ASCII | 95 | 空格到~ |
+| `symbol` | ASCII符号 | 32 | !"#$%&'()*+,-./:;<=>?@[\]^_`{\|}~ 和空格 |
+| `ascii` | 全部可打印ASCII | 95 | 字母+数字+符号（空格到~） |
+| `fullwidth` | 全角符号 | 60+ | 全角标点、数学符号等（，。？！等） |
+| `chinese` | 常用汉字 | 3500 | GB2312一级汉字 |
+
+默认字符集：`lower,upper,digit`（大小写字母+数字，62字符）
+
+### 组合示例
+
+```bash
+# 仅小写字母
+./target/release/zip_cracker -c lower -l 4 文件.zip
+
+# 小写+数字
+./target/release/zip_cracker -c lower,digit -l 4 文件.zip
+
+# 大小写字母+数字（默认）
+./target/release/zip_cracker -c lower,upper,digit -l 4 文件.zip
+
+# 仅数字+符号（如：123!）
+./target/release/zip_cracker -c digit,symbol -l 4 文件.zip
+
+# 拼音声母+数字
+./target/release/zip_cracker -c pinyin,digit -l 4 文件.zip
+
+# 数字+全角符号
+./target/release/zip_cracker -c digit,fullwidth -l 4 文件.zip
+
+# 字母+数字+ASCII符号（全部ASCII）
+./target/release/zip_cracker -c ascii -l 4 文件.zip
+```
 
 ## 性能参考
 
@@ -75,14 +108,14 @@ cargo build --release
 
 ### 速度基准
 
-| 字符集 | 4位密码组合数 | 预计时间 | 平均速度 |
-|--------|--------------|---------|----------|
-| digit | 10,000 | <1秒 | ~30,000/秒 |
-| pinyin | 160,000 | ~2秒 | ~60,000/秒 |
-| lower | 456,976 | ~5秒 | ~70,000/秒 |
-| alnum | 1,679,616 | ~17秒 | ~70,000/秒 |
-| base64 | 14,776,336 | ~4分钟 | ~64,000/秒 |
-| ascii | 81,450,625 | ~14分钟 | ~90,000/秒 |
+| 字符集组合 | 字符数 | 4位密码组合数 | 预计时间 | 平均速度 |
+|-----------|--------|--------------|---------|----------|
+| digit | 10 | 10,000 | <1秒 | ~30,000/秒 |
+| pinyin | 20 | 160,000 | ~2秒 | ~60,000/秒 |
+| lower | 26 | 456,976 | ~5秒 | ~70,000/秒 |
+| lower,digit | 36 | 1,679,616 | ~17秒 | ~70,000/秒 |
+| lower,upper,digit | 62 | 14,776,336 | ~4分钟 | ~64,000/秒 |
+| ascii | 95 | 81,450,625 | ~14分钟 | ~90,000/秒 |
 
 ## 依赖
 

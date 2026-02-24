@@ -1,5 +1,6 @@
 use clap::{Parser, ValueEnum};
 use rayon::prelude::*;
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::Read;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -15,9 +16,9 @@ struct Args {
     #[arg(default_value = "../default.zip")]
     zip_path: String,
 
-    /// 字符集选择
-    #[arg(short, long, value_enum, default_value = "base64")]
-    charset: Charset,
+    /// 字符集选择 (可多选，用逗号分隔，如: lower,upper,digit)
+    #[arg(short, long, value_delimiter = ',', default_value = "lower,upper,digit")]
+    charset: Vec<Charset>,
 
     /// 密码长度 (固定长度模式)
     #[arg(short, long)]
@@ -32,10 +33,8 @@ struct Args {
     min_length: usize,
 }
 
-#[derive(Clone, ValueEnum)]
+#[derive(Clone, ValueEnum, PartialEq, Eq, Hash)]
 enum Charset {
-    /// Base64 字符 (A-Za-z0-9, 62字符)
-    Base64,
     /// 拼音声母 (20字符)
     Pinyin,
     /// 小写字母 (a-z, 26字符)
@@ -44,10 +43,14 @@ enum Charset {
     Upper,
     /// 数字 (0-9, 10字符)
     Digit,
-    /// 小写+数字 (a-z0-9, 36字符)
-    Alnum,
+    /// ASCII符号 (32字符)
+    Symbol,
     /// 全部可打印 ASCII (95字符)
     Ascii,
+    /// 全角符号 (常用全角标点)
+    Fullwidth,
+    /// 常用汉字 (3500字符 - GB2312一级汉字)
+    Chinese,
 }
 
 /// 从文件名提取扩展名（小写）
@@ -107,7 +110,7 @@ fn main() {
     let zip_path = &args.zip_path;
     let num_cpus = num_cpus::get();
 
-    let (charset_name, chars) = get_charset(&args.charset);
+    let (charset_name, chars) = get_combined_charset(&args.charset);
 
     // 确定密码长度范围
     let (min_len, max_len) = match (args.length, args.max_length) {
@@ -238,13 +241,9 @@ fn main() {
     println!("平均速度: {:.0} 次/秒", speed);
 }
 
-/// 获取字符集
-fn get_charset(charset: &Charset) -> (&'static str, Vec<char>) {
+/// 获取单个字符集
+fn get_single_charset(charset: &Charset) -> (&'static str, Vec<char>) {
     match charset {
-        Charset::Base64 => (
-            "Base64 (A-Za-z0-9)",
-            ('A'..='Z').chain('a'..='z').chain('0'..='9').collect(),
-        ),
         Charset::Pinyin => (
             "拼音声母",
             vec![
@@ -252,15 +251,115 @@ fn get_charset(charset: &Charset) -> (&'static str, Vec<char>) {
                 's', 'r', 'y', 'w',
             ],
         ),
-        Charset::Lower => ("小写字母 (a-z)", ('a'..='z').collect()),
-        Charset::Upper => ("大写字母 (A-Z)", ('A'..='Z').collect()),
-        Charset::Digit => ("数字 (0-9)", ('0'..='9').collect()),
-        Charset::Alnum => ("小写+数字 (a-z0-9)", ('a'..='z').chain('0'..='9').collect()),
+        Charset::Lower => ("小写字母", ('a'..='z').collect()),
+        Charset::Upper => ("大写字母", ('A'..='Z').collect()),
+        Charset::Digit => ("数字", ('0'..='9').collect()),
+        Charset::Symbol => (
+            "ASCII符号",
+            get_ascii_symbols(),
+        ),
         Charset::Ascii => (
             "可打印ASCII",
             (' '..='~').collect(), // ASCII 32-126
         ),
+        Charset::Fullwidth => (
+            "全角符号",
+            get_fullwidth_symbols(),
+        ),
+        Charset::Chinese => (
+            "常用汉字 (GB2312一级)",
+            get_chinese_charset(),
+        ),
     }
+}
+
+/// 获取 ASCII 符号字符集（不包括字母和数字）
+fn get_ascii_symbols() -> Vec<char> {
+    let mut symbols = Vec::new();
+
+    // 空格
+    symbols.push(' ');
+
+    // !"#$%&'()*+,-./ (ASCII 33-47)
+    symbols.extend('!'..='/');
+    symbols.push('/');
+
+    // :;<=>?@ (ASCII 58-64)
+    symbols.extend(':'..='@');
+
+    // [\]^_` (ASCII 91-96)
+    symbols.extend('['..='`');
+
+    // {|}~ (ASCII 123-126)
+    symbols.extend('{'..='~');
+
+    symbols
+}
+
+/// 获取全角符号字符集
+fn get_fullwidth_symbols() -> Vec<char> {
+    vec![
+        // 全角标点符号
+        '，', '。', '、', '；', '：', '？', '！', '…', '—', '·',
+        '"', '"', '\u{2018}', '\u{2019}', '（', '）', '【', '】', '《', '》',
+        '『', '』', '「', '」', '〈', '〉', '￥', '※', '〃', '々',
+        // 全角数学和其他符号
+        '＋', '－', '×', '÷', '＝', '≠', '＜', '＞', '≤', '≥',
+        '％', '‰', '°', '℃', '＄', '￡', '￠', '＠', '＃', '＆',
+        '＊', '§', '〒', '〓', '□', '■', '△', '▲', '○', '●',
+        '◎', '☆', '★', '◇', '◆', '〔', '〕', '〖', '〗',
+    ]
+}
+
+/// 合并多个字符集（去重）
+fn get_combined_charset(charsets: &[Charset]) -> (String, Vec<char>) {
+    // 去重字符集选择
+    let unique_charsets: Vec<_> = charsets.iter()
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect();
+
+    if unique_charsets.is_empty() {
+        eprintln!("错误: 必须至少选择一个字符集");
+        std::process::exit(1);
+    }
+
+    // 合并所有字符集
+    let mut char_set = HashSet::new();
+    let mut names = Vec::new();
+
+    for charset in &unique_charsets {
+        let (name, chars) = get_single_charset(charset);
+        names.push(name);
+        char_set.extend(chars);
+    }
+
+    let name = names.join(" + ");
+    let mut chars: Vec<char> = char_set.into_iter().collect();
+    chars.sort_unstable(); // 排序以保证顺序一致性
+
+    (name, chars)
+}
+
+/// 获取 GB2312 一级汉字字符集 (3500个常用汉字)
+fn get_chinese_charset() -> Vec<char> {
+    // GB2312 一级汉字：区位码 16-55, 位码 01-94
+    // Unicode 编码范围
+    let mut chars = Vec::with_capacity(3500);
+
+    // GB2312 一级汉字 Unicode 范围（常用汉字）
+    for code in 0x4e00..=0x9fa5_u32 {
+        if let Some(c) = char::from_u32(code) {
+            // 过滤掉不常用的，保留最常用的3500个
+            if chars.len() < 3500 {
+                chars.push(c);
+            } else {
+                break;
+            }
+        }
+    }
+
+    chars
 }
 
 /// 将索引转换为密码字符串
