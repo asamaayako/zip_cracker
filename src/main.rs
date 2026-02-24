@@ -181,7 +181,7 @@ fn main() {
 
     let found = Arc::new(AtomicBool::new(false));
     let start = Instant::now();
-    let mut total_tested: usize = 0;
+    let mut total_tested: u64 = 0;
     let mut result_password: Option<String> = None;
 
     // 从最小长度到最大长度逐一尝试
@@ -194,24 +194,25 @@ fn main() {
             println!("尝试长度 {} ...", current_len);
         }
 
-        let passwords: Vec<String> = generate_all_passwords(&chars, current_len);
-        total_tested += passwords.len();
+        let total_combinations = (chars.len() as u64).pow(current_len as u32);
+        total_tested += total_combinations;
 
-        // 使用 rayon 并行搜索
-        let result = passwords.par_iter().find_any(|pwd| {
+        // 使用索引并行搜索，零内存预分配
+        let result = (0..total_combinations).into_par_iter().find_any(|&index| {
             if found.load(Ordering::Relaxed) {
                 return false;
             }
 
-            if try_password(zip_path, pwd, target_index, &target_ext) {
+            let pwd = index_to_password(index, &chars, current_len);
+            if try_password(zip_path, &pwd, target_index, &target_ext) {
                 found.store(true, Ordering::Relaxed);
                 return true;
             }
             false
         });
 
-        if let Some(pwd) = result {
-            result_password = Some(pwd.clone());
+        if let Some(index) = result {
+            result_password = Some(index_to_password(index, &chars, current_len));
             break;
         }
     }
@@ -262,33 +263,16 @@ fn get_charset(charset: &Charset) -> (&'static str, Vec<char>) {
     }
 }
 
-/// 生成所有指定长度的密码组合
-fn generate_all_passwords(chars: &[char], length: usize) -> Vec<String> {
-    let n = chars.len();
-    let total = n.pow(length as u32);
-    let mut passwords = Vec::with_capacity(total);
+/// 将索引转换为密码字符串
+fn index_to_password(mut index: u64, chars: &[char], length: usize) -> String {
+    let base = chars.len() as u64;
+    let mut result = String::with_capacity(length);
 
-    // 使用迭代方式生成，支持任意长度
-    fn generate_recursive(
-        chars: &[char],
-        current: &mut String,
-        length: usize,
-        passwords: &mut Vec<String>,
-    ) {
-        if current.len() == length {
-            passwords.push(current.clone());
-            return;
-        }
-        for &c in chars {
-            current.push(c);
-            generate_recursive(chars, current, length, passwords);
-            current.pop();
-        }
+    for _ in 0..length {
+        result.push(chars[(index % base) as usize]);
+        index /= base;
     }
-
-    let mut current = String::with_capacity(length);
-    generate_recursive(chars, &mut current, length, &mut passwords);
-    passwords
+    result
 }
 
 fn try_password(zip_path: &str, password: &str, file_index: usize, expected_ext: &str) -> bool {
