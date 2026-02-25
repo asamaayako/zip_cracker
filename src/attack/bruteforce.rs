@@ -26,6 +26,7 @@ pub struct BruteforceParams<'a> {
 }
 
 /// 执行暴力破解攻击
+#[must_use] 
 pub fn bruteforce_attack(params: BruteforceParams) -> BruteforceResult {
     let num_cpus = num_cpus::get();
     let (charset_name, chars) = get_combined_charset(params.charsets);
@@ -35,7 +36,7 @@ pub fn bruteforce_attack(params: BruteforceParams) -> BruteforceResult {
         params.handler.format_name()
     );
     println!("目标文件: {}", params.archive_path);
-    println!("CPU 核心数: {}", num_cpus);
+    println!("CPU 核心数: {num_cpus}");
     println!("字符集: {} ({}字符)", charset_name, chars.len());
 
     if params.min_len == params.max_len {
@@ -86,7 +87,7 @@ pub fn bruteforce_attack(params: BruteforceParams) -> BruteforceResult {
         }
 
         if params.min_len != params.max_len {
-            println!("尝试长度 {} ...", current_len);
+            println!("尝试长度 {current_len} ...");
         }
 
         let total_combinations = (chars.len() as u64).pow(current_len as u32);

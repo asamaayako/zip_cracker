@@ -1,13 +1,15 @@
 /// 从文件名提取扩展名（小写）
+#[must_use] 
 pub fn get_extension(filename: &str) -> Option<String> {
     filename
         .rsplit('.')
         .next()
         .filter(|ext| !ext.is_empty() && ext.len() <= 5)
-        .map(|ext| ext.to_lowercase())
+        .map(str::to_lowercase)
 }
 
 /// 检查扩展名是否被 infer 库支持
+#[must_use] 
 pub fn is_infer_supported(ext: &str) -> bool {
     const SUPPORTED: &[&str] = &[
         // 图片
@@ -32,6 +34,7 @@ pub fn is_infer_supported(ext: &str) -> bool {
 }
 
 /// 使用 infer 库验证文件内容是否匹配期望的扩展名
+#[must_use] 
 pub fn verify_content(data: &[u8], expected_ext: &str) -> bool {
     if data.is_empty() {
         return false;

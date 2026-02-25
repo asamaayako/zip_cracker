@@ -24,11 +24,10 @@ impl ArchiveHandler for SevenZHandler {
             }
 
             let name = entry.name();
-            if let Some(ext) = get_extension(name) {
-                if is_infer_supported(&ext) {
+            if let Some(ext) = get_extension(name)
+                && is_infer_supported(&ext) {
                     candidates.push((i, name.to_string(), ext, entry.size()));
                 }
-            }
         }
 
         // 按文件大小排序，选择最小的
@@ -73,11 +72,10 @@ impl ArchiveHandler for SevenZHandler {
                 if entry.name() == target_name {
                     // 读取文件内容到内存验证
                     let mut buffer = vec![0u8; 8192];
-                    if let Ok(bytes_read) = reader.read(&mut buffer) {
-                        if bytes_read > 0 && verify_content(&buffer[..bytes_read], &target_ext) {
+                    if let Ok(bytes_read) = reader.read(&mut buffer)
+                        && bytes_read > 0 && verify_content(&buffer[..bytes_read], &target_ext) {
                             found_clone.store(true, Ordering::Relaxed);
                         }
-                    }
                     // 找到目标后可以停止（返回 false 停止遍历）
                     return Ok(false);
                 }

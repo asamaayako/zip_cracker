@@ -24,6 +24,7 @@ pub struct CrackSuccess {
 
 impl CrackSuccess {
     /// 计算平均速度（密码/秒）
+    #[must_use] 
     pub fn speed(&self) -> f64 {
         if self.elapsed_secs > 0.0 {
             self.total_tested as f64 / self.elapsed_secs
@@ -44,6 +45,7 @@ pub struct CrackFailure {
 
 impl CrackFailure {
     /// 计算平均速度（密码/秒）
+    #[must_use] 
     pub fn speed(&self) -> f64 {
         if self.elapsed_secs > 0.0 {
             self.total_tested as f64 / self.elapsed_secs
@@ -121,9 +123,7 @@ pub fn crack_archive(args: Args) -> CrackResult {
     let default_dict_path = get_default_dictionary_path();
     let dict_path = args
         .dictionary
-        .as_ref()
-        .map(|p| std::path::PathBuf::from(p))
-        .unwrap_or_else(|| default_dict_path.clone());
+        .as_ref().map_or_else(|| default_dict_path.clone(), std::path::PathBuf::from);
 
     // 确保默认字典存在
     let _ = ensure_dictionary_exists(&default_dict_path);

@@ -21,15 +21,14 @@ impl ArchiveHandler for ZipHandler {
             }
 
             let name_owned = name.to_string();
-            if let Some(ext) = get_extension(&name_owned) {
-                if is_infer_supported(&ext) {
+            if let Some(ext) = get_extension(&name_owned)
+                && is_infer_supported(&ext) {
                     return Some(TargetFile {
                         index: i,
                         name: name_owned,
                         extension: ext,
                     });
                 }
-            }
         }
         None
     }

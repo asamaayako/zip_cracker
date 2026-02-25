@@ -8,7 +8,7 @@ pub use self::sevenz::SevenZHandler;
 use std::path::Path;
 
 /// 压缩包格式
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ArchiveFormat {
     Zip,
     SevenZ,
@@ -16,13 +16,14 @@ pub enum ArchiveFormat {
 
 impl ArchiveFormat {
     /// 从文件路径自动检测格式
+    #[must_use] 
     pub fn detect(path: &str) -> Option<Self> {
         let path = Path::new(path);
         let ext = path.extension()?.to_str()?.to_lowercase();
 
         match ext.as_str() {
-            "zip" => Some(ArchiveFormat::Zip),
-            "7z" => Some(ArchiveFormat::SevenZ),
+            "zip" => Some(Self::Zip),
+            "7z" => Some(Self::SevenZ),
             _ => None,
         }
     }
@@ -52,6 +53,7 @@ pub trait ArchiveHandler: Send + Sync {
 }
 
 /// 获取对应格式的处理器
+#[must_use] 
 pub fn get_handler(format: ArchiveFormat) -> Box<dyn ArchiveHandler> {
     match format {
         ArchiveFormat::Zip => Box::new(ZipHandler),

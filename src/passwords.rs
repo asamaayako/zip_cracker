@@ -1,5 +1,5 @@
 /// Top 1000 常用密码列表
-/// 来源: SecLists - https://github.com/danielmiessler/SecLists
+/// 来源: `SecLists` - <https://github.com/danielmiessler/SecLists>
 pub const TOP_1000_PASSWORDS: &[&str] = &[
     "password",
     "123456",
