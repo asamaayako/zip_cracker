@@ -1,6 +1,6 @@
 use rayon::prelude::*;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
 
 use crate::archive::{ArchiveHandler, TargetFile};
@@ -18,16 +18,16 @@ pub struct BruteforceResult {
 pub struct BruteforceParams<'a> {
     pub archive_path: &'a str,
     pub charsets: &'a [Charset],
-    pub min_len: usize,
-    pub max_len: usize,
+    pub min_len: u32,
+    pub max_len: u32,
     pub target: &'a TargetFile,
     pub file_count: usize,
     pub handler: &'a dyn ArchiveHandler,
 }
 
 /// 执行暴力破解攻击
-#[must_use] 
-pub fn bruteforce_attack(params: BruteforceParams) -> BruteforceResult {
+#[must_use]
+pub fn bruteforce_attack(params: &BruteforceParams) -> BruteforceResult {
     let num_cpus = num_cpus::get();
     let (charset_name, chars) = get_combined_charset(params.charsets);
 
@@ -41,7 +41,7 @@ pub fn bruteforce_attack(params: BruteforceParams) -> BruteforceResult {
 
     if params.min_len == params.max_len {
         println!("密码长度: {}", params.min_len);
-        let total_combinations = (chars.len() as u64).pow(params.min_len as u32);
+        let total_combinations = (chars.len() as u64).pow(params.min_len);
         println!(
             "密码空间: {}^{} = {} 组合",
             chars.len(),
@@ -54,7 +54,7 @@ pub fn bruteforce_attack(params: BruteforceParams) -> BruteforceResult {
             params.min_len, params.max_len
         );
         let total_combinations: u64 = (params.min_len..=params.max_len)
-            .map(|len| (chars.len() as u64).pow(len as u32))
+            .map(|len| (chars.len() as u64).pow(len))
             .sum();
         println!(
             "密码空间: {} 组合 (长度{}到{}的总和)",
@@ -90,7 +90,7 @@ pub fn bruteforce_attack(params: BruteforceParams) -> BruteforceResult {
             println!("尝试长度 {current_len} ...");
         }
 
-        let total_combinations = (chars.len() as u64).pow(current_len as u32);
+        let total_combinations = (chars.len() as u64).pow(current_len);
         total_tested += total_combinations;
 
         // 使用索引并行搜索，零内存预分配
@@ -99,7 +99,7 @@ pub fn bruteforce_attack(params: BruteforceParams) -> BruteforceResult {
                 return false;
             }
 
-            let pwd = index_to_password(index, &chars, current_len);
+            let pwd = index_to_password(index, &chars, current_len as usize);
             if params
                 .handler
                 .try_password(params.archive_path, &pwd, params.target)
@@ -111,7 +111,7 @@ pub fn bruteforce_attack(params: BruteforceParams) -> BruteforceResult {
         });
 
         if let Some(index) = result {
-            result_password = Some(index_to_password(index, &chars, current_len));
+            result_password = Some(index_to_password(index, &chars, current_len as usize));
             break;
         }
     }

@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use crate::cli::Charset;
 
 /// 获取单个字符集
-#[must_use] 
+#[must_use]
 pub fn get_single_charset(charset: &Charset) -> (&'static str, Vec<char>) {
     match charset {
         Charset::Pinyin => (
@@ -57,8 +57,8 @@ fn get_fullwidth_symbols() -> Vec<char> {
         '（', '）', '【', '】', '《', '》', '『', '』', '「', '」', '〈', '〉', '￥', '※', '〃',
         '々', // 全角数学和其他符号
         '＋', '－', '×', '÷', '＝', '≠', '＜', '＞', '≤', '≥', '％', '‰', '°', '℃', '＄', '￡',
-        '￠', '＠', '＃', '＆', '＊', '§', '〒', '〓', '□', '■', '△', '▲', '○', '●', '◎', '☆',
-        '★', '◇', '◆', '〔', '〕', '〖', '〗',
+        '￠', '＠', '＃', '＆', '＊', '§', '〒', '〓', '□', '■', '△', '▲', '○', '●', '◎', '☆', '★',
+        '◇', '◆', '〔', '〕', '〖', '〗',
     ]
 }
 
@@ -81,10 +81,14 @@ fn get_chinese_charset() -> Vec<char> {
 }
 
 /// 合并多个字符集（去重）
-#[must_use] 
+#[must_use]
 pub fn get_combined_charset(charsets: &[Charset]) -> (String, Vec<char>) {
     // 去重字符集选择
-    let unique_charsets: Vec<_> = charsets.iter().collect::<HashSet<_>>().into_iter().collect();
+    let unique_charsets: Vec<_> = charsets
+        .iter()
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect();
 
     if unique_charsets.is_empty() {
         eprintln!("错误: 必须至少选择一个字符集");
@@ -109,13 +113,15 @@ pub fn get_combined_charset(charsets: &[Charset]) -> (String, Vec<char>) {
 }
 
 /// 将索引转换为密码字符串
-#[must_use] 
+#[must_use]
 pub fn index_to_password(mut index: u64, chars: &[char], length: usize) -> String {
     let base = chars.len() as u64;
     let mut result = String::with_capacity(length);
 
     for _ in 0..length {
-        result.push(chars[(index % base) as usize]);
+        #[allow(clippy::cast_possible_truncation)]
+        let char_index = (index % base) as usize;
+        result.push(chars[char_index]);
         index /= base;
     }
     result

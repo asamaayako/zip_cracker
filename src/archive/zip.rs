@@ -22,13 +22,14 @@ impl ArchiveHandler for ZipHandler {
 
             let name_owned = name.to_string();
             if let Some(ext) = get_extension(&name_owned)
-                && is_infer_supported(&ext) {
-                    return Some(TargetFile {
-                        index: i,
-                        name: name_owned,
-                        extension: ext,
-                    });
-                }
+                && is_infer_supported(&ext)
+            {
+                return Some(TargetFile {
+                    index: i,
+                    name: name_owned,
+                    extension: ext,
+                });
+            }
         }
         None
     }
@@ -40,34 +41,27 @@ impl ArchiveHandler for ZipHandler {
     }
 
     fn try_password(&self, path: &str, password: &str, target: &TargetFile) -> bool {
-        let file = match File::open(path) {
-            Ok(f) => f,
-            Err(_) => return false,
+        let Ok(file) = File::open(path) else {
+            return false;
         };
 
-        let mut archive = match ZipArchive::new(file) {
-            Ok(a) => a,
-            Err(_) => return false,
+        let Ok(mut archive) = ZipArchive::new(file) else {
+            return false;
         };
 
         let result = archive.by_index_decrypt(target.index, password.as_bytes());
         match result {
             Ok(mut file) => {
                 let mut buffer = vec![0u8; 8192];
-                let bytes_read = match file.read(&mut buffer) {
-                    Ok(n) => n,
-                    Err(_) => return false,
+                let Ok(bytes_read) = file.read(&mut buffer) else {
+                    return false;
                 };
 
                 if bytes_read == 0 {
                     return false;
                 }
-
-                if let Some(kind) = infer::get(&buffer[..bytes_read]) {
-                    kind.extension() == target.extension
-                } else {
-                    false
-                }
+                infer::get(&buffer[..bytes_read])
+                    .is_some_and(|kind| kind.extension() == target.extension)
             }
             Err(_) => false,
         }

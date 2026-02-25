@@ -4,10 +4,9 @@ pub mod charset;
 pub mod cli;
 pub mod passwords;
 
-use archive::{get_handler, ArchiveFormat};
+use archive::{ArchiveFormat, get_handler};
 use attack::{
-    append_to_dictionary, bruteforce_attack, dictionary_attack, ensure_dictionary_exists,
-    get_default_dictionary_path,
+    bruteforce_attack, dictionary_attack, ensure_dictionary_exists, get_default_dictionary_path,
 };
 pub use cli::Args;
 
@@ -24,7 +23,8 @@ pub struct CrackSuccess {
 
 impl CrackSuccess {
     /// 计算平均速度（密码/秒）
-    #[must_use] 
+    #[must_use]
+    #[allow(clippy::cast_precision_loss)]
     pub fn speed(&self) -> f64 {
         if self.elapsed_secs > 0.0 {
             self.total_tested as f64 / self.elapsed_secs
@@ -45,7 +45,8 @@ pub struct CrackFailure {
 
 impl CrackFailure {
     /// 计算平均速度（密码/秒）
-    #[must_use] 
+    #[must_use]
+    #[allow(clippy::cast_precision_loss)]
     pub fn speed(&self) -> f64 {
         if self.elapsed_secs > 0.0 {
             self.total_tested as f64 / self.elapsed_secs
@@ -68,7 +69,7 @@ pub enum CrackError {
     ConflictingLengthParams,
 
     #[error("--min-length ({0}) 不能大于 --max-length ({1})")]
-    InvalidLengthRange(usize, usize),
+    InvalidLengthRange(u32, u32),
 
     #[error("密码长度不能为 0")]
     ZeroLength,
@@ -103,7 +104,7 @@ pub type CrackResult = Result<CrackSuccess, CrackError>;
 ///     skip_dictionary: false,
 /// };
 ///
-/// match crack_archive(args) {
+/// match crack_archive(&args) {
 ///     Ok(success) => {
 ///         println!("密码: {}", success.password);
 ///         println!("速度: {:.0} 次/秒", success.speed());
@@ -111,19 +112,19 @@ pub type CrackResult = Result<CrackSuccess, CrackError>;
 ///     Err(e) => eprintln!("错误: {}", e),
 /// }
 /// ```
-pub fn crack_archive(args: Args) -> CrackResult {
+pub fn crack_archive(args: &Args) -> CrackResult {
     let archive_path = &args.archive_path;
 
     // 检测压缩包格式
-    let format = ArchiveFormat::detect(archive_path)
-        .ok_or(CrackError::UnsupportedFormat)?;
+    let format = ArchiveFormat::detect(archive_path).ok_or(CrackError::UnsupportedFormat)?;
     let handler = get_handler(format);
 
     // 获取字典路径
     let default_dict_path = get_default_dictionary_path();
     let dict_path = args
         .dictionary
-        .as_ref().map_or_else(|| default_dict_path.clone(), std::path::PathBuf::from);
+        .as_ref()
+        .map_or_else(|| default_dict_path.clone(), std::path::PathBuf::from);
 
     // 确保默认字典存在
     let _ = ensure_dictionary_exists(&default_dict_path);
@@ -174,7 +175,7 @@ pub fn crack_archive(args: Args) -> CrackResult {
             return Err(CrackError::ZeroLength);
         }
 
-        let result = bruteforce_attack(attack::bruteforce::BruteforceParams {
+        let result = bruteforce_attack(&attack::bruteforce::BruteforceParams {
             archive_path,
             charsets: &args.charset,
             min_len,
@@ -193,18 +194,17 @@ pub fn crack_archive(args: Args) -> CrackResult {
     }
 
     // 如果找到密码，保存到默认字典并返回成功
-    if let Some(password) = found_password {
-        let _ = append_to_dictionary(&default_dict_path, &password);
-
-        Ok(CrackSuccess {
-            password,
-            total_tested,
-            elapsed_secs: total_elapsed,
-        })
-    } else {
+    found_password.map_or(
         Err(CrackError::NotFound(CrackFailure {
             total_tested,
             elapsed_secs: total_elapsed,
-        }))
-    }
+        })),
+        |password| {
+            Ok(CrackSuccess {
+                password,
+                total_tested,
+                elapsed_secs: total_elapsed,
+            })
+        },
+    )
 }

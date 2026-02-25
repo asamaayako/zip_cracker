@@ -1,4 +1,4 @@
-use archive_cracker::{crack_archive, Args, cli::Charset, CrackError};
+use archive_cracker::{Args, CrackError, cli::Charset, crack_archive};
 
 fn main() {
     // 示例 1: 只使用字典攻击 + 默认 1-5 位暴力破解
@@ -12,7 +12,7 @@ fn main() {
         skip_dictionary: false,
     };
 
-    match crack_archive(args) {
+    match crack_archive(&args) {
         Ok(success) => {
             println!("✅ 密码找到: {}", success.password);
             println!("   耗时: {:.2}秒", success.elapsed_secs);
@@ -23,7 +23,7 @@ fn main() {
             println!("   已测试: {} 个", failure.total_tested);
         }
         Err(e) => {
-            eprintln!("❌ 错误: {}", e);
+            eprintln!("❌ 错误: {e}");
         }
     }
 
@@ -32,13 +32,13 @@ fn main() {
         archive_path: "test.zip".to_string(),
         dictionary: None,
         charset: vec![Charset::Digit],
-        length: Some(4),  // 只破解 4 位数字
+        length: Some(4), // 只破解 4 位数字
         max_length: None,
         min_length: 1,
         skip_dictionary: false,
     };
 
-    if let Ok(success) = crack_archive(args2) {
+    if let Ok(success) = crack_archive(&args2) {
         println!("第二次尝试成功: {}", success.password);
     }
 
@@ -48,13 +48,13 @@ fn main() {
         dictionary: Some("/path/to/custom.txt".to_string()),
         charset: vec![Charset::Lower, Charset::Digit],
         length: None,
-        max_length: Some(6),  // 破解 1-6 位
+        max_length: Some(6), // 破解 1-6 位
         min_length: 1,
         skip_dictionary: false,
     };
 
-    match crack_archive(args3) {
+    match crack_archive(&args3) {
         Ok(success) => println!("第三次尝试成功: {}", success.password),
-        Err(e) => println!("第三次尝试失败: {}", e),
+        Err(e) => println!("第三次尝试失败: {e}"),
     }
 }

@@ -12,20 +12,25 @@ pub struct Args {
     pub dictionary: Option<String>,
 
     /// 字符集选择 (可多选，用逗号分隔，如: lower,upper,digit)
-    #[arg(short, long, value_delimiter = ',', default_value = "lower,upper,digit")]
+    #[arg(
+        short,
+        long,
+        value_delimiter = ',',
+        default_value = "lower,upper,digit"
+    )]
     pub charset: Vec<Charset>,
 
     /// 密码长度 (固定长度模式，暴力破解时必需)
     #[arg(short, long)]
-    pub length: Option<usize>,
+    pub length: Option<u32>,
 
     /// 最大密码长度 (递增模式: 从 min-length 开始逐一尝试到此长度)
     #[arg(short, long)]
-    pub max_length: Option<usize>,
+    pub max_length: Option<u32>,
 
     /// 最小密码长度 (递增模式下的起始长度, 默认为1)
     #[arg(long, default_value = "1")]
-    pub min_length: usize,
+    pub min_length: u32,
 
     /// 跳过字典攻击，直接暴力破解
     #[arg(long)]

@@ -3,8 +3,8 @@ use std::collections::HashSet;
 use std::fs::{self, File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
 
 use crate::archive::{ArchiveHandler, TargetFile};
@@ -18,7 +18,7 @@ pub struct DictionaryResult {
 }
 
 /// 获取默认字典路径 (~/.`archive_cracker/dictionary.txt`)
-#[must_use] 
+#[must_use]
 pub fn get_default_dictionary_path() -> PathBuf {
     let home = dirs::home_dir().expect("无法获取用户主目录");
     home.join(".archive_cracker").join("dictionary.txt")
@@ -73,7 +73,7 @@ pub fn load_dictionary(path: &str) -> Result<Vec<String>, std::io::Error> {
 
     let passwords: Vec<String> = reader
         .lines()
-        .filter_map(std::result::Result::ok)
+        .map_while(std::result::Result::ok)
         .filter(|line| !line.is_empty() && !line.starts_with('#'))
         .collect();
 
@@ -88,7 +88,7 @@ pub fn load_dictionary_unique(path: &str) -> Result<Vec<String>, std::io::Error>
     let mut seen = HashSet::new();
     let passwords: Vec<String> = reader
         .lines()
-        .filter_map(std::result::Result::ok)
+        .map_while(std::result::Result::ok)
         .filter(|line| !line.is_empty() && !line.starts_with('#'))
         .filter(|line| seen.insert(line.clone()))
         .collect();

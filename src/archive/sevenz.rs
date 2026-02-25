@@ -1,6 +1,6 @@
 use std::fs::File;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use super::common::{get_extension, is_infer_supported, verify_content};
 use super::{ArchiveHandler, TargetFile};
@@ -25,17 +25,23 @@ impl ArchiveHandler for SevenZHandler {
 
             let name = entry.name();
             if let Some(ext) = get_extension(name)
-                && is_infer_supported(&ext) {
-                    candidates.push((i, name.to_string(), ext, entry.size()));
-                }
+                && is_infer_supported(&ext)
+            {
+                candidates.push((i, name.to_string(), ext, entry.size()));
+            }
         }
 
         // 按文件大小排序，选择最小的
         candidates.sort_by_key(|(_, _, _, size)| *size);
 
-        candidates.into_iter().next().map(|(index, name, extension, _)| {
-            TargetFile { index, name, extension }
-        })
+        candidates
+            .into_iter()
+            .next()
+            .map(|(index, name, extension, _)| TargetFile {
+                index,
+                name,
+                extension,
+            })
     }
 
     fn file_count(&self, path: &str) -> Result<usize, String> {
@@ -47,9 +53,8 @@ impl ArchiveHandler for SevenZHandler {
     }
 
     fn try_password(&self, path: &str, password: &str, target: &TargetFile) -> bool {
-        let file = match File::open(path) {
-            Ok(f) => f,
-            Err(_) => return false,
+        let Ok(file) = File::open(path) else {
+            return false;
         };
 
         let target_name = target.name.clone();
@@ -73,9 +78,11 @@ impl ArchiveHandler for SevenZHandler {
                     // 读取文件内容到内存验证
                     let mut buffer = vec![0u8; 8192];
                     if let Ok(bytes_read) = reader.read(&mut buffer)
-                        && bytes_read > 0 && verify_content(&buffer[..bytes_read], &target_ext) {
-                            found_clone.store(true, Ordering::Relaxed);
-                        }
+                        && bytes_read > 0
+                        && verify_content(&buffer[..bytes_read], &target_ext)
+                    {
+                        found_clone.store(true, Ordering::Relaxed);
+                    }
                     // 找到目标后可以停止（返回 false 停止遍历）
                     return Ok(false);
                 }

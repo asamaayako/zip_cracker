@@ -9,7 +9,7 @@ fn main() {
     println!();
 
     // 调用库函数执行破解
-    let result = crack_archive(args);
+    let result = crack_archive(&args);
 
     // 输出结果
     println!();
