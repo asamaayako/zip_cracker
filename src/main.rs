@@ -66,57 +66,54 @@ fn main() {
         }
     }
 
-    // 第二阶段：暴力破解（如果字典失败且指定了长度参数）
+    // 第二阶段：暴力破解（如果字典失败）
     if found_password.is_none() {
-        let has_length_params = args.length.is_some() || args.max_length.is_some();
-
-        if has_length_params {
-            println!();
-            println!("=== 阶段 2: 暴力破解 ===");
-
-            // 确定密码长度范围
-            let (min_len, max_len) = match (args.length, args.max_length) {
-                (Some(len), None) => (len, len),
-                (None, Some(max)) => (args.min_length, max),
-                (Some(_), Some(_)) => {
-                    eprintln!("错误: --length 和 --max-length 不能同时使用");
-                    std::process::exit(1);
-                }
-                (None, None) => unreachable!(),
-            };
-
-            if min_len > max_len {
-                eprintln!(
-                    "错误: --min-length ({}) 不能大于 --max-length ({})",
-                    min_len, max_len
-                );
+        // 确定密码长度范围
+        let (min_len, max_len) = match (args.length, args.max_length) {
+            // 指定固定长度：只破解这个长度
+            (Some(len), None) => (len, len),
+            // 指定最大长度：破解范围 [min_length, max_length]
+            (None, Some(max)) => (args.min_length, max),
+            // 两者都指定：冲突
+            (Some(_), Some(_)) => {
+                eprintln!("错误: --length 和 --max-length 不能同时使用");
                 std::process::exit(1);
             }
+            // 都未指定：默认破解 1-5 位
+            (None, None) => (1, 5),
+        };
 
-            if min_len == 0 {
-                eprintln!("错误: 密码长度不能为 0");
-                std::process::exit(1);
-            }
+        println!();
+        println!("=== 阶段 2: 暴力破解 ===");
 
-            let result = bruteforce_attack(attack::bruteforce::BruteforceParams {
-                archive_path,
-                charsets: &args.charset,
-                min_len,
-                max_len,
-                target: &target,
-                file_count,
-                handler: handler.as_ref(),
-            });
-
-            total_tested += result.total_tested;
-            total_elapsed += result.elapsed_secs;
-
-            if let Some(pwd) = result.password {
-                found_password = Some(pwd);
-            }
-        } else if args.skip_dictionary {
-            eprintln!("错误: 跳过字典攻击时必须指定 --length 或 --max-length 参数");
+        if min_len > max_len {
+            eprintln!(
+                "错误: --min-length ({}) 不能大于 --max-length ({})",
+                min_len, max_len
+            );
             std::process::exit(1);
+        }
+
+        if min_len == 0 {
+            eprintln!("错误: 密码长度不能为 0");
+            std::process::exit(1);
+        }
+
+        let result = bruteforce_attack(attack::bruteforce::BruteforceParams {
+            archive_path,
+            charsets: &args.charset,
+            min_len,
+            max_len,
+            target: &target,
+            file_count,
+            handler: handler.as_ref(),
+        });
+
+        total_tested += result.total_tested;
+        total_elapsed += result.elapsed_secs;
+
+        if let Some(pwd) = result.password {
+            found_password = Some(pwd);
         }
     }
 

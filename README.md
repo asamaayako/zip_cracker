@@ -34,25 +34,27 @@ cargo build --release
 
 ### 基本用法（推荐）
 
-只需指定压缩包路径，程序会自动使用内置字典尝试破解：
+只需指定压缩包路径，程序会自动：
+1. 先尝试字典中的 Top 1000 常用密码
+2. 如果失败，自动暴力破解 1-5 位密码
 
 ```bash
 ./archive_cracker 文件.zip
 ./archive_cracker 文件.7z
 ```
 
-### 字典 + 暴力破解组合
+### 自定义暴力破解
 
-如果字典攻击失败，可以指定长度参数进行暴力破解：
+指定固定长度或范围进行暴力破解：
 
 ```bash
-# 先尝试字典，失败后暴力破解 4 位密码
+# 字典 + 固定 4 位密码暴力破解
 ./archive_cracker -l 4 文件.zip
 
-# 先尝试字典，失败后尝试 1-6 位密码
+# 字典 + 1-6 位密码范围破解
 ./archive_cracker -m 6 文件.zip
 
-# 先尝试字典，失败后尝试 3-8 位纯数字密码
+# 字典 + 3-8 位纯数字密码
 ./archive_cracker -c digit --min-length 3 -m 8 文件.zip
 ```
 
@@ -63,6 +65,8 @@ cargo build --release
 ```
 
 ### 跳过字典攻击
+
+直接进行暴力破解（必须指定长度）：
 
 ```bash
 ./archive_cracker --skip-dictionary -l 4 文件.zip
