@@ -74,49 +74,6 @@ cargo build --release
 ./archive_cracker --skip-dictionary -l 4 文件.zip
 ```
 
-### 作为库使用
-
-在 `Cargo.toml` 中添加依赖：
-
-```toml
-[dependencies]
-archive_cracker = "0.1"
-```
-
-代码示例：
-
-```rust
-use archive_cracker::{crack_archive, Args, cli::Charset, CrackError};
-
-fn main() {
-    let args = Args {
-        archive_path: "file.zip".to_string(),
-        dictionary: None,
-        charset: vec![Charset::Lower, Charset::Upper, Charset::Digit],
-        length: Some(4),  // 破解 4 位密码
-        max_length: None,
-        min_length: 1,
-        skip_dictionary: false,
-    };
-
-    match crack_archive(args) {
-        Ok(success) => {
-            println!("密码: {}", success.password);
-            println!("耗时: {:.2}秒", success.elapsed_secs);
-            println!("速度: {:.0} 次/秒", success.speed());
-        }
-        Err(CrackError::NotFound(failure)) => {
-            println!("未找到密码，已测试 {} 个", failure.total_tested);
-        }
-        Err(e) => {
-            eprintln!("错误: {}", e);
-        }
-    }
-}
-```
-
-更多示例请参考 [examples/basic_usage.rs](examples/basic_usage.rs)
-
 ## 参数说明
 
 | 参数 | 说明 |
