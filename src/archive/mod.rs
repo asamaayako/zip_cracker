@@ -1,11 +1,9 @@
 pub mod common;
 mod zip;
 mod sevenz;
-mod rar;
 
 pub use self::zip::ZipHandler;
 pub use self::sevenz::SevenZHandler;
-pub use self::rar::RarHandler;
 
 use std::path::Path;
 
@@ -14,7 +12,6 @@ use std::path::Path;
 pub enum ArchiveFormat {
     Zip,
     SevenZ,
-    Rar,
 }
 
 impl ArchiveFormat {
@@ -26,7 +23,6 @@ impl ArchiveFormat {
         match ext.as_str() {
             "zip" => Some(ArchiveFormat::Zip),
             "7z" => Some(ArchiveFormat::SevenZ),
-            "rar" => Some(ArchiveFormat::Rar),
             _ => None,
         }
     }
@@ -60,6 +56,5 @@ pub fn get_handler(format: ArchiveFormat) -> Box<dyn ArchiveHandler> {
     match format {
         ArchiveFormat::Zip => Box::new(ZipHandler),
         ArchiveFormat::SevenZ => Box::new(SevenZHandler),
-        ArchiveFormat::Rar => Box::new(RarHandler),
     }
 }

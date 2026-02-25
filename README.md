@@ -1,10 +1,10 @@
 # Archive Cracker
 
-多线程压缩包密码破解工具，使用 Rust 编写。支持 ZIP、7z、RAR 格式。
+多线程压缩包密码破解工具，使用 Rust 编写。支持 ZIP、7z 格式。
 
 ## 特性
 
-- **多格式支持**：支持 ZIP、7z、RAR 加密压缩包
+- **多格式支持**：支持 ZIP、7z 加密压缩包
 - **多线程并行**：使用 rayon 库充分利用多核 CPU
 - **智能攻击策略**：先尝试字典攻击，失败后自动进行暴力破解
 - **密码记忆**：破解成功的密码自动保存到字典，下次优先尝试
@@ -39,7 +39,6 @@ cargo build --release
 ```bash
 ./archive_cracker 文件.zip
 ./archive_cracker 文件.7z
-./archive_cracker 文件.rar
 ```
 
 ### 字典 + 暴力破解组合
@@ -119,7 +118,6 @@ abc123
 |------|--------|----------|
 | ZIP | .zip | ✅ ZipCrypto, AES |
 | 7z | .7z | ✅ AES-256 |
-| RAR | .rar | ✅ RAR3, RAR5 |
 
 ## 性能参考
 
@@ -138,7 +136,6 @@ abc123
 - [rayon](https://crates.io/crates/rayon) - 并行计算
 - [zip](https://crates.io/crates/zip) - ZIP 文件处理
 - [sevenz-rust](https://crates.io/crates/sevenz-rust) - 7z 文件处理
-- [unrar](https://crates.io/crates/unrar) - RAR 文件处理
 - [infer](https://crates.io/crates/infer) - 文件类型检测
 - [clap](https://crates.io/crates/clap) - 命令行参数解析
 
