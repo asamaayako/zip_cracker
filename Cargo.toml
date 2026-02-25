@@ -3,6 +3,14 @@ name = "archive_cracker"
 version = "0.1.5"
 edition = "2024"
 
+[lib]
+name = "archive_cracker"
+path = "src/lib.rs"
+
+[[bin]]
+name = "archive_cracker"
+path = "src/main.rs"
+
 [dependencies]
 zip = "8.1"
 rayon = "1.10"

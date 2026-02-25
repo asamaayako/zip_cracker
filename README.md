@@ -32,7 +32,9 @@ cargo build --release
 
 ## 使用
 
-### 基本用法（推荐）
+### 命令行工具
+
+#### 基本用法（推荐）
 
 只需指定压缩包路径，程序会自动：
 1. 先尝试字典中的 Top 1000 常用密码
@@ -43,7 +45,7 @@ cargo build --release
 ./archive_cracker 文件.7z
 ```
 
-### 自定义暴力破解
+#### 自定义暴力破解
 
 指定固定长度或范围进行暴力破解：
 
@@ -58,19 +60,60 @@ cargo build --release
 ./archive_cracker -c digit --min-length 3 -m 8 文件.zip
 ```
 
-### 使用自定义字典
+#### 使用自定义字典
 
 ```bash
 ./archive_cracker -D rockyou.txt 文件.zip
 ```
 
-### 跳过字典攻击
+#### 跳过字典攻击
 
 直接进行暴力破解（必须指定长度）：
 
 ```bash
 ./archive_cracker --skip-dictionary -l 4 文件.zip
 ```
+
+### 作为库使用
+
+在 `Cargo.toml` 中添加依赖：
+
+```toml
+[dependencies]
+archive_cracker = "0.1"
+```
+
+代码示例：
+
+```rust
+use archive_cracker::{crack_archive, Args, cli::Charset};
+
+fn main() {
+    let args = Args {
+        archive_path: "file.zip".to_string(),
+        dictionary: None,
+        charset: vec![Charset::Lower, Charset::Upper, Charset::Digit],
+        length: Some(4),  // 破解 4 位密码
+        max_length: None,
+        min_length: 1,
+        skip_dictionary: false,
+    };
+
+    let result = crack_archive(args);
+
+    if result.is_success() {
+        println!("密码: {}", result.password.unwrap());
+        println!("耗时: {:.2}秒", result.elapsed_secs);
+        println!("速度: {:.0} 次/秒", result.speed());
+    } else if let Some(err) = result.error {
+        eprintln!("错误: {}", err);
+    } else {
+        println!("未找到密码");
+    }
+}
+```
+
+更多示例请参考 [examples/basic_usage.rs](examples/basic_usage.rs)
 
 ## 参数说明
 
