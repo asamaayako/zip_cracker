@@ -86,7 +86,7 @@ archive_cracker = "0.1"
 代码示例：
 
 ```rust
-use archive_cracker::{crack_archive, Args, cli::Charset};
+use archive_cracker::{crack_archive, Args, cli::Charset, CrackError};
 
 fn main() {
     let args = Args {
@@ -99,16 +99,18 @@ fn main() {
         skip_dictionary: false,
     };
 
-    let result = crack_archive(args);
-
-    if result.is_success() {
-        println!("密码: {}", result.password.unwrap());
-        println!("耗时: {:.2}秒", result.elapsed_secs);
-        println!("速度: {:.0} 次/秒", result.speed());
-    } else if let Some(err) = result.error {
-        eprintln!("错误: {}", err);
-    } else {
-        println!("未找到密码");
+    match crack_archive(args) {
+        Ok(success) => {
+            println!("密码: {}", success.password);
+            println!("耗时: {:.2}秒", success.elapsed_secs);
+            println!("速度: {:.0} 次/秒", success.speed());
+        }
+        Err(CrackError::NotFound(failure)) => {
+            println!("未找到密码，已测试 {} 个", failure.total_tested);
+        }
+        Err(e) => {
+            eprintln!("错误: {}", e);
+        }
     }
 }
 ```

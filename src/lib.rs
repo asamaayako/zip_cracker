@@ -11,25 +11,18 @@ use attack::{
 };
 pub use cli::Args;
 
-/// 密码破解结果
+/// 密码破解成功结果
 #[derive(Debug, Clone)]
-pub struct CrackResult {
-    /// 找到的密码（如果成功）
-    pub password: Option<String>,
+pub struct CrackSuccess {
+    /// 找到的密码
+    pub password: String,
     /// 总共测试的密码数量
     pub total_tested: u64,
     /// 总耗时（秒）
     pub elapsed_secs: f64,
-    /// 错误信息（如果失败）
-    pub error: Option<String>,
 }
 
-impl CrackResult {
-    /// 是否成功找到密码
-    pub fn is_success(&self) -> bool {
-        self.password.is_some()
-    }
-
+impl CrackSuccess {
     /// 计算平均速度（密码/秒）
     pub fn speed(&self) -> f64 {
         if self.elapsed_secs > 0.0 {
@@ -40,13 +33,59 @@ impl CrackResult {
     }
 }
 
+/// 密码破解失败结果
+#[derive(Debug, Clone)]
+pub struct CrackFailure {
+    /// 总共测试的密码数量
+    pub total_tested: u64,
+    /// 总耗时（秒）
+    pub elapsed_secs: f64,
+}
+
+impl CrackFailure {
+    /// 计算平均速度（密码/秒）
+    pub fn speed(&self) -> f64 {
+        if self.elapsed_secs > 0.0 {
+            self.total_tested as f64 / self.elapsed_secs
+        } else {
+            0.0
+        }
+    }
+}
+
+/// 密码破解错误
+#[derive(Debug, Clone, thiserror::Error)]
+pub enum CrackError {
+    #[error("不支持的压缩包格式（支持: ZIP, 7z）")]
+    UnsupportedFormat,
+
+    #[error("未找到可识别扩展名的加密文件")]
+    NoRecognizableFile,
+
+    #[error("--length 和 --max-length 不能同时使用")]
+    ConflictingLengthParams,
+
+    #[error("--min-length ({0}) 不能大于 --max-length ({1})")]
+    InvalidLengthRange(usize, usize),
+
+    #[error("密码长度不能为 0")]
+    ZeroLength,
+
+    #[error("未找到密码")]
+    NotFound(CrackFailure),
+}
+
+/// 密码破解结果类型
+pub type CrackResult = Result<CrackSuccess, CrackError>;
+
 /// 执行密码破解
 ///
 /// # 参数
 /// - `args`: CLI 参数配置
 ///
 /// # 返回
-/// 返回破解结果，包含密码、测试次数、耗时等信息
+/// 成功返回 `Ok(CrackSuccess)` 包含密码和统计信息
+/// 失败返回 `Err(CrackError)` 包含错误类型和统计信息（如适用）
 ///
 /// # 示例
 /// ```no_run
@@ -62,26 +101,20 @@ impl CrackResult {
 ///     skip_dictionary: false,
 /// };
 ///
-/// let result = crack_archive(args);
-/// if result.is_success() {
-///     println!("密码: {}", result.password.unwrap());
+/// match crack_archive(args) {
+///     Ok(success) => {
+///         println!("密码: {}", success.password);
+///         println!("速度: {:.0} 次/秒", success.speed());
+///     }
+///     Err(e) => eprintln!("错误: {}", e),
 /// }
 /// ```
 pub fn crack_archive(args: Args) -> CrackResult {
     let archive_path = &args.archive_path;
 
     // 检测压缩包格式
-    let format = match ArchiveFormat::detect(archive_path) {
-        Some(f) => f,
-        None => {
-            return CrackResult {
-                password: None,
-                total_tested: 0,
-                elapsed_secs: 0.0,
-                error: Some("不支持的压缩包格式（支持: ZIP, 7z）".to_string()),
-            };
-        }
-    };
+    let format = ArchiveFormat::detect(archive_path)
+        .ok_or(CrackError::UnsupportedFormat)?;
     let handler = get_handler(format);
 
     // 获取字典路径
@@ -96,17 +129,9 @@ pub fn crack_archive(args: Args) -> CrackResult {
     let _ = ensure_dictionary_exists(&default_dict_path);
 
     // 检测目标文件
-    let target = match handler.detect_target(archive_path) {
-        Some(t) => t,
-        None => {
-            return CrackResult {
-                password: None,
-                total_tested: 0,
-                elapsed_secs: 0.0,
-                error: Some("未找到可识别扩展名的加密文件".to_string()),
-            };
-        }
-    };
+    let target = handler
+        .detect_target(archive_path)
+        .ok_or(CrackError::NoRecognizableFile)?;
 
     let file_count = handler.file_count(archive_path).unwrap_or(0);
 
@@ -137,36 +162,16 @@ pub fn crack_archive(args: Args) -> CrackResult {
         let (min_len, max_len) = match (args.length, args.max_length) {
             (Some(len), None) => (len, len),
             (None, Some(max)) => (args.min_length, max),
-            (Some(_), Some(_)) => {
-                return CrackResult {
-                    password: None,
-                    total_tested,
-                    elapsed_secs: total_elapsed,
-                    error: Some("--length 和 --max-length 不能同时使用".to_string()),
-                };
-            }
+            (Some(_), Some(_)) => return Err(CrackError::ConflictingLengthParams),
             (None, None) => (1, 5),
         };
 
         if min_len > max_len {
-            return CrackResult {
-                password: None,
-                total_tested,
-                elapsed_secs: total_elapsed,
-                error: Some(format!(
-                    "--min-length ({}) 不能大于 --max-length ({})",
-                    min_len, max_len
-                )),
-            };
+            return Err(CrackError::InvalidLengthRange(min_len, max_len));
         }
 
         if min_len == 0 {
-            return CrackResult {
-                password: None,
-                total_tested,
-                elapsed_secs: total_elapsed,
-                error: Some("密码长度不能为 0".to_string()),
-            };
+            return Err(CrackError::ZeroLength);
         }
 
         let result = bruteforce_attack(attack::bruteforce::BruteforceParams {
@@ -187,15 +192,19 @@ pub fn crack_archive(args: Args) -> CrackResult {
         }
     }
 
-    // 如果找到密码，保存到默认字典
-    if let Some(ref pwd) = found_password {
-        let _ = append_to_dictionary(&default_dict_path, pwd);
-    }
+    // 如果找到密码，保存到默认字典并返回成功
+    if let Some(password) = found_password {
+        let _ = append_to_dictionary(&default_dict_path, &password);
 
-    CrackResult {
-        password: found_password,
-        total_tested,
-        elapsed_secs: total_elapsed,
-        error: None,
+        Ok(CrackSuccess {
+            password,
+            total_tested,
+            elapsed_secs: total_elapsed,
+        })
+    } else {
+        Err(CrackError::NotFound(CrackFailure {
+            total_tested,
+            elapsed_secs: total_elapsed,
+        }))
     }
 }

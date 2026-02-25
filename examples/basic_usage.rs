@@ -1,4 +1,4 @@
-use archive_cracker::{crack_archive, Args, cli::Charset};
+use archive_cracker::{crack_archive, Args, cli::Charset, CrackError};
 
 fn main() {
     // 示例 1: 只使用字典攻击 + 默认 1-5 位暴力破解
@@ -12,16 +12,19 @@ fn main() {
         skip_dictionary: false,
     };
 
-    let result = crack_archive(args);
-
-    if result.is_success() {
-        println!("密码找到: {}", result.password.as_ref().unwrap());
-        println!("耗时: {:.2}秒", result.elapsed_secs);
-        println!("速度: {:.0} 次/秒", result.speed());
-    } else if let Some(err) = result.error {
-        eprintln!("错误: {}", err);
-    } else {
-        println!("未找到密码");
+    match crack_archive(args) {
+        Ok(success) => {
+            println!("✅ 密码找到: {}", success.password);
+            println!("   耗时: {:.2}秒", success.elapsed_secs);
+            println!("   速度: {:.0} 次/秒", success.speed());
+        }
+        Err(CrackError::NotFound(failure)) => {
+            println!("❌ 未找到密码");
+            println!("   已测试: {} 个", failure.total_tested);
+        }
+        Err(e) => {
+            eprintln!("❌ 错误: {}", e);
+        }
     }
 
     // 示例 2: 指定固定长度
@@ -35,8 +38,9 @@ fn main() {
         skip_dictionary: false,
     };
 
-    let result2 = crack_archive(args2);
-    println!("第二次尝试: {:?}", result2.password);
+    if let Ok(success) = crack_archive(args2) {
+        println!("第二次尝试成功: {}", success.password);
+    }
 
     // 示例 3: 指定范围
     let args3 = Args {
@@ -49,6 +53,8 @@ fn main() {
         skip_dictionary: false,
     };
 
-    let result3 = crack_archive(args3);
-    println!("第三次尝试: {:?}", result3.password);
+    match crack_archive(args3) {
+        Ok(success) => println!("第三次尝试成功: {}", success.password),
+        Err(e) => println!("第三次尝试失败: {}", e),
+    }
 }

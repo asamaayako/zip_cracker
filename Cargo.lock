@@ -85,6 +85,7 @@ dependencies = [
  "num_cpus",
  "rayon",
  "sevenz-rust",
+ "thiserror",
  "zip",
 ]
 
